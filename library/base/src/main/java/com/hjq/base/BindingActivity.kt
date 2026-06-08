@@ -1,4 +1,4 @@
-package com.aotem.worker.base
+package com.jichao.base
 
 import android.app.Activity
 import android.content.Context
@@ -11,18 +11,25 @@ import android.view.Window
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
-import com.aotem.worker.base.action.*
-import java.util.*
+import androidx.viewbinding.ViewBinding
+import com.jichao.base.action.ActivityAction
+import com.jichao.base.action.BundleAction
+import com.jichao.base.action.ClickAction
+import com.jichao.base.action.HandlerAction
+import com.jichao.base.action.KeyboardAction
+import java.util.Random
 import kotlin.math.pow
 
-/**
- *    author : Android 轮子哥
- *    github : https://github.com/getActivity/AndroidProject-Kotlin
- *    time   : 2018/10/18
- *    desc   : Activity 技术基类
+/***
+ **  @author: JiChao
+ **  @date: 2024/5/13 2:21
+ **  @desc: ViewBindings封装的 activity基类
  */
-abstract class BaseActivity : AppCompatActivity(), ActivityAction,
+abstract class BindingActivity<VB : ViewBinding> : AppCompatActivity(), ActivityAction,
     ClickAction, HandlerAction, BundleAction, KeyboardAction {
+
+    // 当调用binding的时候 就会调用getViewBinding方法， 由于使用了lazy，所以该方法只会调用一次
+    protected val binding by lazy { getViewBinding() }
 
     companion object {
 
@@ -44,10 +51,6 @@ abstract class BaseActivity : AppCompatActivity(), ActivityAction,
         initData()
     }
 
-    /**
-     * 获取布局 ID
-     */
-    protected abstract fun getLayoutId(): Int
 
     /**
      * 初始化控件
@@ -63,10 +66,8 @@ abstract class BaseActivity : AppCompatActivity(), ActivityAction,
      * 初始化布局
      */
     protected open fun initLayout() {
-        if (getLayoutId() > 0) {
-            setContentView(getLayoutId())
-            initSoftKeyboard()
-        }
+        setContentView(binding.root)
+        initSoftKeyboard()
     }
 
     /**
@@ -94,7 +95,7 @@ abstract class BaseActivity : AppCompatActivity(), ActivityAction,
     /**
      * 如果当前的 Activity（singleTop 启动模式） 被复用时会回调
      */
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // 设置为当前的 Intent，避免 Activity 被杀死后重启 Intent 还是最原先的那个
         setIntent(intent)
@@ -119,11 +120,12 @@ abstract class BaseActivity : AppCompatActivity(), ActivityAction,
         return super<AppCompatActivity>.startActivity(intent)
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent?): Boolean {
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val fragments: MutableList<Fragment?> = supportFragmentManager.fragments
         for (fragment: Fragment? in fragments) {
             // 这个 Fragment 必须是 BaseFragment 的子类，并且处于可见状态
-            if (fragment !is BaseFragment<*> || fragment.getLifecycle().currentState != Lifecycle.State.RESUMED) {
+            if (fragment !is BaseFragment<*> || fragment.lifecycle.currentState != Lifecycle.State.RESUMED) {
                 continue
             }
             // 将按键事件派发给 Fragment 进行处理
@@ -183,4 +185,7 @@ abstract class BaseActivity : AppCompatActivity(), ActivityAction,
          */
         fun onActivityResult(resultCode: Int, data: Intent?)
     }
+
+    protected abstract fun getViewBinding(): VB
+
 }
